@@ -52,6 +52,7 @@ export class Card {
   constructor(doc: Document = document) {
     this.host = doc.createElement("div");
     this.host.style.cssText = "position:fixed;z-index:2147483647;top:0;left:0;display:none;";
+    this.host.setAttribute("data-aidict", "");
     this.root = this.host.attachShadow({ mode: "open" });
     doc.documentElement.appendChild(this.host);
     this.root.addEventListener("click", (e) => {
