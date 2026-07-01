@@ -1,0 +1,15 @@
+import { test, expect } from "vitest";
+import { extractSentence } from "./selection";
+
+test("extractSentence returns the sentence containing the selection", () => {
+  const text = "I went to the bank. It was closed. Then I left.";
+  expect(extractSentence(text, "bank")).toBe("I went to the bank.");
+});
+
+test("extractSentence falls back to the selection when not found", () => {
+  expect(extractSentence("unrelated text", "xyz")).toBe("xyz");
+});
+
+test("extractSentence handles selection in the first sentence with no leading punctuation", () => {
+  expect(extractSentence("Hello world here. Next one.", "world")).toBe("Hello world here.");
+});
