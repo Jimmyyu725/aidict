@@ -6,11 +6,19 @@ function main(): void {
   const icon = new FloatingIcon();
   const card = new Card();
   let pending: SelectionInfo | null = null;
+  let lastLookup: SelectionInfo | null = null;
 
   async function doLookup(info: SelectionInfo): Promise<void> {
+    lastLookup = info;
     card.showAt(info.x, info.y, { kind: "loading" });
-    const req: LookupRequest = { type: "lookup", term: info.text, context: info.context };
-    const resp = (await chrome.runtime.sendMessage(req)) as LookupResponse;
+    let resp: LookupResponse;
+    try {
+      const req: LookupRequest = { type: "lookup", term: info.text, context: info.context };
+      resp = (await chrome.runtime.sendMessage(req)) as LookupResponse;
+    } catch {
+      card.setState({ kind: "error", message: "Extension error — please retry", canRetry: true });
+      return;
+    }
     const state: CardState = resp.ok
       ? { kind: "result", result: resp.result }
       : { kind: "error", message: resp.error === "NO_API_KEY" ? "Set your OpenAI key in options" : resp.error, canRetry: resp.error !== "NO_API_KEY" };
@@ -18,7 +26,7 @@ function main(): void {
   }
 
   icon.onClick(() => { if (pending) { const info = pending; icon.hide(); void doLookup(info); } });
-  card.onRetry(() => { if (pending) void doLookup(pending); });
+  card.onRetry(() => { if (lastLookup) void doLookup(lastLookup); });
 
   document.addEventListener("mouseup", () => {
     setTimeout(() => {
@@ -30,7 +38,7 @@ function main(): void {
 
   document.addEventListener("mousedown", (e) => {
     const path = e.composedPath();
-    if (!path.some((n) => n instanceof HTMLElement && n.getAttribute?.("data-aidict"))) card.hide();
+    if (!path.some((n) => n instanceof HTMLElement && n.hasAttribute("data-aidict"))) card.hide();
   });
 
   chrome.runtime.onMessage.addListener((msg: ToContentMessage) => {
