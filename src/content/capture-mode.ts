@@ -24,7 +24,12 @@ export function startCapture(
 
   let sx = 0, sy = 0, dragging = false;
 
-  const cleanup = () => overlay.remove();
+  let escListener: (ev: KeyboardEvent) => void;
+
+  const cleanup = () => {
+    overlay.remove();
+    document.removeEventListener("keydown", escListener);
+  };
 
   overlay.addEventListener("mousedown", (e) => {
     dragging = true;
@@ -91,11 +96,8 @@ export function startCapture(
     );
   });
 
-  const escListener = (ev: KeyboardEvent) => {
-    if (ev.key === "Escape") {
-      cleanup();
-      document.removeEventListener("keydown", escListener);
-    }
+  escListener = (ev: KeyboardEvent) => {
+    if (ev.key === "Escape") cleanup();
   };
   document.addEventListener("keydown", escListener);
 }
