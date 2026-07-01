@@ -1,1 +1,21 @@
-<!doctype html><meta charset=utf-8><title>AIDict</title><body><script src="options.js"></script>
+<!doctype html>
+<meta charset="utf-8">
+<title>AIDict Settings</title>
+<style>
+  body { font: 14px/1.6 system-ui, sans-serif; max-width: 440px; margin: 24px auto; padding: 0 16px; }
+  label { display: block; margin: 12px 0 4px; font-weight: 600; }
+  input, select { width: 100%; padding: 6px 8px; box-sizing: border-box; }
+  button { margin-top: 16px; padding: 8px 16px; }
+  .saved { color: #090; margin-left: 8px; }
+</style>
+<h1>AIDict</h1>
+<label for="apiKey">OpenAI API Key</label>
+<input id="apiKey" type="password" placeholder="sk-...">
+<label for="model">Model</label>
+<input id="model" type="text">
+<label for="targetLang">Target language</label>
+<input id="targetLang" type="text">
+<label for="cacheTtlDays">Cache TTL (days)</label>
+<input id="cacheTtlDays" type="number" min="0">
+<div><button id="save">Save</button><span id="status" class="saved"></span></div>
+<script src="options.js"></script>
