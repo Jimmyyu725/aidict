@@ -61,7 +61,7 @@ export class Card {
 
   showAt(x: number, y: number, state: CardState): void {
     this.host.style.left = `${Math.min(x, window.innerWidth - 360)}px`;
-    this.host.style.top = `${y + 8}px`;
+    this.host.style.top = `${Math.max(0, Math.min(y + 8, window.innerHeight - 200))}px`;
     this.host.style.display = "block";
     this.setState(state);
   }

@@ -29,3 +29,19 @@ test("phrase result shows the translation", () => {
   };
   expect(renderCardHTML({ kind: "result", result })).toContain("打破僵局");
 });
+
+test("error state hides retry button when canRetry is false", () => {
+  const html = renderCardHTML({ kind: "error", message: "Quota exceeded", canRetry: false });
+  expect(html).toContain("Quota exceeded");
+  expect(html).not.toContain("Retry");
+});
+
+test("result HTML-escapes malicious model text", () => {
+  const result: LookupResult = {
+    word: "<script>alert(1)</script>", phonetic: "", is_phrase: false,
+    senses: [{ pos: "n.", en: "x", zh: "y" }], translation: null,
+  };
+  const html = renderCardHTML({ kind: "result", result });
+  expect(html).not.toContain("<script>alert(1)</script>");
+  expect(html).toContain("&lt;script&gt;");
+});
