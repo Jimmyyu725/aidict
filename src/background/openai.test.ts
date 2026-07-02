@@ -10,8 +10,8 @@ test("buildMessages embeds term, context, and target language", () => {
   expect(joined).toContain("Chinese");
 });
 
-test("parseResponse fills defaults and coerces senses", () => {
-  const r = parseResponse('{"word":"bank","phonetic":"/bæŋk/","is_phrase":false,"senses":[{"pos":"n.","en":"a financial institution","zh":"银行"}]}');
+test("parseResponse accepts a complete valid response", () => {
+  const r = parseResponse('{"word":"bank","phonetic":"/bæŋk/","is_phrase":false,"senses":[{"pos":"n.","en":"a financial institution","zh":"银行"}],"translation":null}');
   expect(r.word).toBe("bank");
   expect(r.senses[0].zh).toBe("银行");
   expect(r.translation).toBeNull();
@@ -19,6 +19,16 @@ test("parseResponse fills defaults and coerces senses", () => {
 
 test("parseResponse throws on invalid JSON", () => {
   expect(() => parseResponse("not json")).toThrow();
+});
+
+test("parseResponse rejects missing required fields", () => {
+  expect(() => parseResponse("{}")).toThrow("invalid response shape");
+});
+
+test("parseResponse rejects malformed senses", () => {
+  expect(() => parseResponse(
+    '{"word":"bank","phonetic":"/b/","is_phrase":false,"senses":[{"pos":"n.","en":42,"zh":"银行"}],"translation":null}'
+  )).toThrow("invalid response shape");
 });
 
 test("callOpenAI returns parsed result on success", async () => {

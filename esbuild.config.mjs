@@ -1,5 +1,6 @@
 import { build } from "esbuild";
-import { cpSync, existsSync, mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const common = { bundle: true, format: "iife", target: "es2022", logLevel: "info" };
 
@@ -31,10 +32,26 @@ cpSync("node_modules/tesseract.js-core/tesseract-core-lstm.wasm.js",          "d
 cpSync("node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm.js",     "dist/tesseract/tesseract-core-simd-lstm.wasm.js");
 cpSync("node_modules/tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js", "dist/tesseract/tesseract-core-relaxedsimd-lstm.wasm.js");
 
-// eng.traineddata.gz is downloaded once by scripts/fetch-traineddata.sh.
-// It is not committed to the repo — warn if it is missing.
-if (existsSync("dist/tesseract/eng.traineddata.gz")) {
-  console.info("dist/tesseract/eng.traineddata.gz present — OCR will work.");
-} else {
-  console.warn("WARNING: dist/tesseract/eng.traineddata.gz missing — run: bash scripts/fetch-traineddata.sh");
+// Keep clean clones reproducible: fetch the OCR language data when absent and
+// fail the build if it cannot be obtained or is clearly not a gzip payload.
+const trainedDataPath = "dist/tesseract/eng.traineddata.gz";
+const trainedDataSha256 = "18c1ac52b75e35d44735fb6c2a60acfaf23033524653200738e98f0243edb75b";
+if (!existsSync(trainedDataPath)) {
+  const trainedDataUrl =
+    "https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_fast/eng.traineddata.gz";
+  console.info("Downloading Tesseract English trained-data...");
+  const response = await fetch(trainedDataUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download OCR trained-data: HTTP ${response.status}`);
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.length < 1_000_000 || bytes[0] !== 0x1f || bytes[1] !== 0x8b) {
+    throw new Error("Downloaded OCR trained-data is invalid");
+  }
+  writeFileSync(trainedDataPath, bytes);
 }
+const trainedDataDigest = createHash("sha256").update(readFileSync(trainedDataPath)).digest("hex");
+if (trainedDataDigest !== trainedDataSha256) {
+  throw new Error("OCR trained-data checksum mismatch");
+}
+console.info(`${trainedDataPath} present — OCR will work.`);

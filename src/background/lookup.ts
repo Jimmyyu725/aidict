@@ -15,7 +15,7 @@ export interface LookupDeps {
 export async function lookup(
   term: string, context: string, deps: LookupDeps
 ): Promise<{ result: LookupResult; cached: boolean }> {
-  const key = cacheKey(term, context);
+  const key = cacheKey(term, context, deps.settings.model, deps.settings.targetLang);
   const hit = await getCached(deps.storage, key, deps.settings.cacheTtlDays, deps.now);
   if (hit) return { result: hit, cached: true };
   const call = deps.call ?? callOpenAI;

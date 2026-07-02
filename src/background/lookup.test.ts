@@ -29,3 +29,13 @@ test("second identical lookup is served from cache", async () => {
   expect(out.cached).toBe(true);
   expect(call).toHaveBeenCalledOnce(); // not called again
 });
+
+test("changing target language bypasses the old cache entry", async () => {
+  const call = vi.fn(async () => R);
+  const st = fakeStorage();
+  await lookup("bank", "ctx", { storage: st, settings, now: 0, call });
+  const changed = { ...settings, targetLang: "Japanese" };
+  const out = await lookup("bank", "ctx", { storage: st, settings: changed, now: 1000, call });
+  expect(out.cached).toBe(false);
+  expect(call).toHaveBeenCalledTimes(2);
+});

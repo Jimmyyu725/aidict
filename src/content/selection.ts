@@ -1,5 +1,10 @@
-export function extractSentence(containerText: string, selected: string): string {
-  const idx = containerText.indexOf(selected);
+export function extractSentence(containerText: string, selected: string, selectedStart?: number): string {
+  const validOffset =
+    selectedStart != null &&
+    selectedStart >= 0 &&
+    selectedStart + selected.length <= containerText.length &&
+    containerText.slice(selectedStart, selectedStart + selected.length) === selected;
+  const idx = validOffset ? selectedStart : containerText.indexOf(selected);
   if (idx < 0) return selected;
   const before = containerText.slice(0, idx);
   const startMatch = before.match(/[.!?\n][^.!?\n]*$/);
@@ -17,14 +22,33 @@ export interface SelectionInfo { text: string; context: string; x: number; y: nu
 export function readSelection(win: Window): SelectionInfo | null {
   const sel = win.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
-  const text = sel.toString().trim();
+  const rawText = sel.toString();
+  const text = rawText.trim();
   if (!text) return null;
   const range = sel.getRangeAt(0);
   const rect = range.getBoundingClientRect();
   const container = range.startContainer;
-  const containerText =
-    (container.nodeType === Node.TEXT_NODE ? container.parentElement?.textContent : (container as Element).textContent) ?? text;
-  return { text, context: extractSentence(containerText, text), x: rect.right, y: rect.bottom };
+  const contextElement = container.nodeType === Node.TEXT_NODE
+    ? container.parentElement
+    : container instanceof Element ? container : null;
+  const containerText = contextElement?.textContent ?? text;
+  let selectedStart: number | undefined;
+  if (contextElement) {
+    try {
+      const prefix = range.cloneRange();
+      prefix.selectNodeContents(contextElement);
+      prefix.setEnd(range.startContainer, range.startOffset);
+      selectedStart = prefix.toString().length + rawText.indexOf(text);
+    } catch {
+      // Fall back to a text search when the DOM changes during selection.
+    }
+  }
+  return {
+    text,
+    context: extractSentence(containerText, text, selectedStart),
+    x: rect.right,
+    y: rect.bottom,
+  };
 }
 
 export class FloatingIcon {

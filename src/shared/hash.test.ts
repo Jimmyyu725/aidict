@@ -12,3 +12,10 @@ test("cacheKey is stable and normalization-insensitive", () => {
 test("cacheKey differs for different context", () => {
   expect(cacheKey("bank", "money bank")).not.toBe(cacheKey("bank", "river bank"));
 });
+
+test("cacheKey differs for model and target language", () => {
+  expect(cacheKey("bank", "ctx", "gpt-4o-mini", "Chinese"))
+    .not.toBe(cacheKey("bank", "ctx", "gpt-4o-mini", "Japanese"));
+  expect(cacheKey("bank", "ctx", "gpt-4o-mini", "Chinese"))
+    .not.toBe(cacheKey("bank", "ctx", "gpt-4.1-mini", "Chinese"));
+});

@@ -13,3 +13,8 @@ test("extractSentence falls back to the selection when not found", () => {
 test("extractSentence handles selection in the first sentence with no leading punctuation", () => {
   expect(extractSentence("Hello world here. Next one.", "world")).toBe("Hello world here.");
 });
+
+test("extractSentence uses the selected occurrence when text repeats", () => {
+  const text = "I sat on the river bank. Later I visited the bank.";
+  expect(extractSentence(text, "bank", text.lastIndexOf("bank"))).toBe("Later I visited the bank.");
+});

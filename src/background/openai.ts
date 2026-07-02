@@ -1,4 +1,4 @@
-import { LookupResult, Settings } from "../shared/types";
+import { LookupResult, Sense, Settings } from "../shared/types";
 
 export function buildMessages(term: string, context: string, targetLang: string) {
   const system =
@@ -18,19 +18,37 @@ export function buildMessages(term: string, context: string, targetLang: string)
 }
 
 export function parseResponse(raw: string): LookupResult {
-  let obj: any;
-  try { obj = JSON.parse(raw); } catch { throw new Error("Model returned invalid JSON"); }
-  if (typeof obj !== "object" || obj === null) throw new Error("Model returned non-object");
-  const senses = Array.isArray(obj.senses)
-    ? obj.senses.filter((s: any) => s && typeof s === "object")
-        .map((s: any) => ({ pos: String(s.pos ?? ""), en: String(s.en ?? ""), zh: String(s.zh ?? "") }))
-    : [];
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); } catch { throw new Error("Model returned invalid JSON"); }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("Model returned invalid response shape");
+  }
+  const obj = parsed as Record<string, unknown>;
+  if (
+    typeof obj.word !== "string" ||
+    typeof obj.phonetic !== "string" ||
+    typeof obj.is_phrase !== "boolean" ||
+    !Array.isArray(obj.senses) ||
+    !(obj.translation === null || typeof obj.translation === "string")
+  ) {
+    throw new Error("Model returned invalid response shape");
+  }
+  const senses: Sense[] = obj.senses.map((sense) => {
+    if (typeof sense !== "object" || sense === null || Array.isArray(sense)) {
+      throw new Error("Model returned invalid response shape");
+    }
+    const item = sense as Record<string, unknown>;
+    if (typeof item.pos !== "string" || typeof item.en !== "string" || typeof item.zh !== "string") {
+      throw new Error("Model returned invalid response shape");
+    }
+    return { pos: item.pos, en: item.en, zh: item.zh };
+  });
   return {
-    word: String(obj.word ?? ""),
-    phonetic: String(obj.phonetic ?? ""),
-    is_phrase: Boolean(obj.is_phrase),
+    word: obj.word,
+    phonetic: obj.phonetic,
+    is_phrase: obj.is_phrase,
     senses,
-    translation: obj.translation == null ? null : String(obj.translation),
+    translation: obj.translation,
   };
 }
 

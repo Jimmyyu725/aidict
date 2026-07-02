@@ -32,11 +32,16 @@ chrome.runtime.onMessage.addListener((msg: RuntimeRequest, _sender, sendResponse
   return false;
 });
 
+function enterCapture(tab: chrome.tabs.Tab): void {
+  if (tab.id == null) return;
+  const msg: ToContentMessage = { type: "enter-capture" };
+  chrome.tabs.sendMessage(tab.id, msg, { frameId: 0 }).catch(() => {});
+}
+
 chrome.commands.onCommand.addListener(async (command) => {
   if (command !== "capture") return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab?.id != null) {
-    const msg: ToContentMessage = { type: "enter-capture" };
-    chrome.tabs.sendMessage(tab.id, msg, { frameId: 0 }).catch(() => {});
-  }
+  if (tab) enterCapture(tab);
 });
+
+chrome.action.onClicked.addListener(enterCapture);
