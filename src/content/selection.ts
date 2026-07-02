@@ -58,11 +58,13 @@ export class FloatingIcon {
   constructor(doc: Document = document) {
     this.el = doc.createElement("div");
     this.el.textContent = "词";
+    this.el.title = "Hover to look up";
     this.el.style.cssText =
       "position:fixed;z-index:2147483646;display:none;width:22px;height:22px;line-height:22px;" +
       "text-align:center;font:12px system-ui;color:#fff;background:#06c;border-radius:50%;" +
       "cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3);user-select:none;";
     this.el.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); this.cb?.(); });
+    this.el.addEventListener("mouseenter", () => this.cb?.());
     doc.documentElement.appendChild(this.el);
   }
 

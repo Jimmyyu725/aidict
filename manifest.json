@@ -1,16 +1,19 @@
 {
   "manifest_version": 3,
   "name": "AIDict",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "AI-powered look-up dictionary that works on any website, including images and PDFs via OCR.",
   "permissions": ["storage", "activeTab", "contextMenus", "commands"],
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js" },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
   "content_scripts": [
     { "matches": ["<all_urls>"], "all_frames": true, "run_at": "document_idle", "js": ["content.js"] }
   ],
   "options_page": "options.html",
-  "action": { "default_title": "AIDict — press Alt+D to capture" },
+  "action": { "default_title": "AIDict — open settings" },
   "commands": {
     "capture": {
       "suggested_key": { "default": "Alt+D" },

@@ -9,6 +9,58 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+const POS_ABBREVIATIONS: Record<string, string> = {
+  noun: "n.",
+  n: "n.",
+  verb: "v.",
+  v: "v.",
+  adjective: "adj.",
+  adj: "adj.",
+  adverb: "adv.",
+  adv: "adv.",
+  pronoun: "pron.",
+  pron: "pron.",
+  preposition: "prep.",
+  prep: "prep.",
+  conjunction: "conj.",
+  conj: "conj.",
+  determiner: "det.",
+  det: "det.",
+  article: "art.",
+  art: "art.",
+  "auxiliary verb": "aux.",
+  auxiliary: "aux.",
+  aux: "aux.",
+  "modal verb": "modal v.",
+  modal: "modal v.",
+  interjection: "interj.",
+  interj: "interj.",
+  numeral: "num.",
+  number: "num.",
+  num: "num.",
+  abbreviation: "abbr.",
+  abbr: "abbr.",
+  phrase: "phr.",
+  phr: "phr.",
+  "phrasal verb": "phr. v.",
+  idiom: "idiom",
+  prefix: "pref.",
+  pref: "pref.",
+  suffix: "suff.",
+  suff: "suff.",
+  "transitive verb": "vt.",
+  transitive: "vt.",
+  vt: "vt.",
+  "intransitive verb": "vi.",
+  intransitive: "vi.",
+  vi: "vi.",
+};
+
+export function formatPartOfSpeech(pos: string): string {
+  const normalized = pos.trim().toLowerCase().replace(/\.+$/, "");
+  return POS_ABBREVIATIONS[normalized] ?? pos;
+}
+
 export function renderCardHTML(state: CardState): string {
   if (state.kind === "loading") return `<div class="aidict-body">Looking up…</div>`;
   if (state.kind === "error") {
@@ -21,7 +73,7 @@ export function renderCardHTML(state: CardState): string {
       `<div class="aidict-trans">${esc(r.translation ?? "")}</div></div>`;
   }
   const senses = r.senses.map(s =>
-    `<li><span class="aidict-pos">${esc(s.pos)}</span> ` +
+    `<li><span class="aidict-pos">${esc(formatPartOfSpeech(s.pos))}</span> ` +
     `<span class="aidict-en">${esc(s.en)}</span> ` +
     `<span class="aidict-zh">${esc(s.zh)}</span></li>`).join("");
   return `<div class="aidict-body">` +

@@ -4,6 +4,8 @@ import { getCached, setCached } from "../shared/cache";
 import { cacheKey } from "../shared/hash";
 import { callOpenAI } from "./openai";
 
+const LOOKUP_CACHE_VERSION = "lookup-v3";
+
 export interface LookupDeps {
   storage: StorageArea;
   settings: Settings;
@@ -15,7 +17,13 @@ export interface LookupDeps {
 export async function lookup(
   term: string, context: string, deps: LookupDeps
 ): Promise<{ result: LookupResult; cached: boolean }> {
-  const key = cacheKey(term, context, deps.settings.model, deps.settings.targetLang);
+  const key = cacheKey(
+    term,
+    context,
+    deps.settings.model,
+    deps.settings.targetLang,
+    LOOKUP_CACHE_VERSION
+  );
   const hit = await getCached(deps.storage, key, deps.settings.cacheTtlDays, deps.now);
   if (hit) return { result: hit, cached: true };
   const call = deps.call ?? callOpenAI;

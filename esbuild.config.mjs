@@ -9,10 +9,12 @@ mkdirSync("dist/icons", { recursive: true });
 
 await build({ ...common, entryPoints: ["src/background/index.ts"], outfile: "dist/background.js" });
 await build({ ...common, entryPoints: ["src/content/index.ts"], outfile: "dist/content.js" });
+await build({ ...common, entryPoints: ["src/capture/index.ts"], outfile: "dist/capture.js" });
 await build({ ...common, entryPoints: ["src/options/options.ts"], outfile: "dist/options.js" });
 
 // Static assets
 cpSync("manifest.json", "dist/manifest.json");
+cpSync("src/capture/capture.html", "dist/capture.html");
 cpSync("src/options/options.html", "dist/options.html");
 cpSync("icons", "dist/icons", { recursive: true });
 

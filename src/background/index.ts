@@ -6,6 +6,7 @@ const storage: StorageArea = {
   get: (keys) => chrome.storage.local.get(keys),
   set: (items) => chrome.storage.local.set(items),
 };
+const PENDING_CAPTURE_KEY = "pending-restricted-capture";
 
 async function handleLookup(term: string, context: string): Promise<LookupResponse> {
   try {
@@ -32,16 +33,30 @@ chrome.runtime.onMessage.addListener((msg: RuntimeRequest, _sender, sendResponse
   return false;
 });
 
-function enterCapture(tab: chrome.tabs.Tab): void {
+async function openRestrictedCapture(tab: chrome.tabs.Tab): Promise<void> {
+  try {
+    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+    await chrome.storage.session.set({ [PENDING_CAPTURE_KEY]: dataUrl });
+    await chrome.tabs.create({ url: chrome.runtime.getURL("capture.html") });
+  } catch (e) {
+    console.error("[AIDict] Unable to capture this page:", e);
+  }
+}
+
+async function enterCapture(tab: chrome.tabs.Tab): Promise<void> {
   if (tab.id == null) return;
   const msg: ToContentMessage = { type: "enter-capture" };
-  chrome.tabs.sendMessage(tab.id, msg, { frameId: 0 }).catch(() => {});
+  try {
+    await chrome.tabs.sendMessage(tab.id, msg, { frameId: 0 });
+  } catch {
+    await openRestrictedCapture(tab);
+  }
 }
 
 chrome.commands.onCommand.addListener(async (command) => {
   if (command !== "capture") return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab) enterCapture(tab);
+  if (tab) await enterCapture(tab);
 });
 
-chrome.action.onClicked.addListener(enterCapture);
+chrome.action.onClicked.addListener(() => { void chrome.runtime.openOptionsPage(); });

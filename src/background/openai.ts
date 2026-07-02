@@ -1,16 +1,42 @@
 import { LookupResult, Sense, Settings } from "../shared/types";
 
+export function isSingleWordTerm(term: string): boolean {
+  return /^[A-Za-z]+(?:[-'][A-Za-z]+)*$/.test(term.trim());
+}
+
+export function markTermInContext(term: string, context: string): string {
+  if (!context) return "(none)";
+  const index = context.toLocaleLowerCase().indexOf(term.trim().toLocaleLowerCase());
+  if (index < 0) return context;
+  return context.slice(0, index) + "[[" +
+    context.slice(index, index + term.trim().length) +
+    "]]" + context.slice(index + term.trim().length);
+}
+
 export function buildMessages(term: string, context: string, targetLang: string) {
+  const singleWord = isSingleWordTerm(term);
+  const markedContext = markTermInContext(term, context);
   const system =
     `You are a bilingual dictionary engine. The user selected a term on a web page. ` +
     `Return ONLY a JSON object with this exact shape: ` +
     `{"word":string,"phonetic":string,"is_phrase":boolean,` +
     `"senses":[{"pos":string,"en":string,"zh":string}],"translation":string|null}. ` +
     `"phonetic" is the English IPA. "zh" and "translation" must be written in ${targetLang}. ` +
-    `If the term is a single word: is_phrase=false, fill senses (most relevant first, disambiguated ` +
-    `by the context sentence), translation=null. If it is a phrase or sentence: is_phrase=true, put ` +
-    `the ${targetLang} translation in "translation", senses may be []. No prose, no markdown.`;
-  const user = `Term: ${term}\nContext sentence: ${context || "(none)"}`;
+    `"pos" must use a standard abbreviation from: n., v., adj., adv., pron., prep., conj., det., ` +
+    `art., aux., modal v., interj., num., abbr., phr., phr. v., idiom, pref., suff., vt., vi. ` +
+    `The Context sentence is reference material only. Never translate it unless the Term itself is ` +
+    `the entire sentence. The lookup mode is already determined by the application: ` +
+    `${singleWord ? "SINGLE_WORD" : "PHRASE"}. ` +
+    (singleWord
+      ? `For SINGLE_WORD: is_phrase=false, translation=null, and senses must contain at least one ` +
+        `dictionary sense, ordered by relevance to the Context sentence. Determine the part of ` +
+        `speech from the exact syntactic role of the text inside [[double brackets]], including ` +
+        `inflected forms. Do not substitute the word's more common out-of-context part of speech. ` +
+        `For example, "We're [[rewarding]] you" is v., while "a [[rewarding]] job" is adj. `
+      : `For PHRASE: is_phrase=true, put only the Term's ${targetLang} translation in "translation"; ` +
+        `senses may be empty. `) +
+    `No prose, no markdown.`;
+  const user = `Term to look up: ${term}\nContext only (do not translate): ${markedContext}`;
   return [
     { role: "system", content: system },
     { role: "user", content: user },
@@ -74,5 +100,12 @@ export async function callOpenAI(
   const data = await res.json();
   const content = data?.choices?.[0]?.message?.content;
   if (typeof content !== "string") throw new Error("Empty response from model");
-  return parseResponse(content);
+  const result = parseResponse(content);
+  if (isSingleWordTerm(term)) {
+    if (result.senses.length === 0) {
+      throw new Error("Model returned no dictionary senses");
+    }
+    return { ...result, is_phrase: false, translation: null };
+  }
+  return result;
 }

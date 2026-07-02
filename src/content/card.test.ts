@@ -1,5 +1,5 @@
 import { test, expect } from "vitest";
-import { renderCardHTML } from "./card";
+import { formatPartOfSpeech, renderCardHTML } from "./card";
 import { LookupResult } from "../shared/types";
 
 test("loading state shows a spinner label", () => {
@@ -44,4 +44,21 @@ test("result HTML-escapes malicious model text", () => {
   const html = renderCardHTML({ kind: "result", result });
   expect(html).not.toContain("<script>alert(1)</script>");
   expect(html).toContain("&lt;script&gt;");
+});
+
+test("formatPartOfSpeech standardizes full names and preserves known abbreviations", () => {
+  expect(formatPartOfSpeech("noun")).toBe("n.");
+  expect(formatPartOfSpeech("Adjective")).toBe("adj.");
+  expect(formatPartOfSpeech("phrasal verb")).toBe("phr. v.");
+  expect(formatPartOfSpeech("vt.")).toBe("vt.");
+});
+
+test("card renders legacy full part-of-speech names as abbreviations", () => {
+  const result: LookupResult = {
+    word: "academic", phonetic: "/ˌækəˈdemɪk/", is_phrase: false,
+    senses: [{ pos: "noun", en: "a scholar", zh: "学者" }], translation: null,
+  };
+  const html = renderCardHTML({ kind: "result", result });
+  expect(html).toContain("n.");
+  expect(html).not.toContain(">noun<");
 });
