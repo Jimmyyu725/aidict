@@ -1,5 +1,5 @@
 import { test, expect } from "vitest";
-import { extractSentence, shouldPrefetch } from "./selection";
+import { extractSentence, normalizeTerm, shouldPrefetch } from "./selection";
 
 test("extractSentence returns the sentence containing the selection", () => {
   const text = "I went to the bank. It was closed. Then I left.";
@@ -28,4 +28,26 @@ test("shouldPrefetch rejects empty, over-long, and letterless selections", () =>
   expect(shouldPrefetch("   ")).toBe(false);
   expect(shouldPrefetch("a".repeat(61))).toBe(false);
   expect(shouldPrefetch("12345 %$#")).toBe(false);
+});
+
+test("normalizeTerm strips a possessive suffix, straight or curly", () => {
+  expect(normalizeTerm("continent's")).toBe("continent");
+  expect(normalizeTerm("continent’s")).toBe("continent");
+  expect(normalizeTerm("JAMES'S")).toBe("JAMES");
+});
+
+test("normalizeTerm strips surrounding punctuation and plural possessive", () => {
+  expect(normalizeTerm("continents’")).toBe("continents");
+  expect(normalizeTerm("“landmass,”")).toBe("landmass");
+  expect(normalizeTerm("(bank).")).toBe("bank");
+});
+
+test("normalizeTerm keeps interior apostrophes and plain words unchanged", () => {
+  expect(normalizeTerm("don't")).toBe("don't");
+  expect(normalizeTerm("o'clock")).toBe("o'clock");
+  expect(normalizeTerm("landmass")).toBe("landmass");
+});
+
+test("normalizeTerm returns the original when stripping would empty it", () => {
+  expect(normalizeTerm("...")).toBe("...");
 });

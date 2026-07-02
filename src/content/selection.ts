@@ -28,6 +28,22 @@ export function shouldPrefetch(text: string): boolean {
   return t.length > 0 && t.length <= 60 && /[A-Za-z]/.test(t);
 }
 
+/**
+ * Normalize a selected term for dictionary lookup: strip surrounding punctuation
+ * and a possessive suffix ("continent's" / "continent’s" → "continent") so
+ * inflected selections still get a full dictionary entry and share the result
+ * cache with the base form. Interior apostrophes (don't, o'clock) are kept.
+ * Falls back to the trimmed original when stripping would leave nothing.
+ */
+export function normalizeTerm(raw: string): string {
+  const t = raw.trim();
+  const stripped = t
+    .replace(/^[\s"'“”‘’()[\]{}.,;:!?…«»]+/, "")
+    .replace(/[\s"'“”‘’()[\]{}.,;:!?…«»]+$/, "")
+    .replace(/['’][sS]$/, "");
+  return stripped.length > 0 ? stripped : t;
+}
+
 export interface SelectionInfo { text: string; context: string; x: number; y: number; }
 
 export function readSelection(win: Window): SelectionInfo | null {
