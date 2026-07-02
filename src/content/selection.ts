@@ -17,6 +17,17 @@ export function extractSentence(containerText: string, selected: string, selecte
   return containerText.slice(start, end).trim();
 }
 
+/**
+ * Whether a selection is worth prefetching a lookup for. Prefetch warms the
+ * result cache the moment text is selected so the icon click is instant, but it
+ * costs an API call — so limit it to word / short-phrase selections that contain
+ * at least one letter (skip long paragraph drags and pure numbers/symbols).
+ */
+export function shouldPrefetch(text: string): boolean {
+  const t = text.trim();
+  return t.length > 0 && t.length <= 60 && /[A-Za-z]/.test(t);
+}
+
 export interface SelectionInfo { text: string; context: string; x: number; y: number; }
 
 export function readSelection(win: Window): SelectionInfo | null {

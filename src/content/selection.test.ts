@@ -1,5 +1,5 @@
 import { test, expect } from "vitest";
-import { extractSentence } from "./selection";
+import { extractSentence, shouldPrefetch } from "./selection";
 
 test("extractSentence returns the sentence containing the selection", () => {
   const text = "I went to the bank. It was closed. Then I left.";
@@ -17,4 +17,15 @@ test("extractSentence handles selection in the first sentence with no leading pu
 test("extractSentence uses the selected occurrence when text repeats", () => {
   const text = "I sat on the river bank. Later I visited the bank.";
   expect(extractSentence(text, "bank", text.lastIndexOf("bank"))).toBe("Later I visited the bank.");
+});
+
+test("shouldPrefetch accepts a single word and a short phrase", () => {
+  expect(shouldPrefetch("bank")).toBe(true);
+  expect(shouldPrefetch("break the ice")).toBe(true);
+});
+
+test("shouldPrefetch rejects empty, over-long, and letterless selections", () => {
+  expect(shouldPrefetch("   ")).toBe(false);
+  expect(shouldPrefetch("a".repeat(61))).toBe(false);
+  expect(shouldPrefetch("12345 %$#")).toBe(false);
 });
