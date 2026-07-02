@@ -1,16 +1,18 @@
 import { computeCropRect, cropDataUrl, Rect } from "./crop";
 import { tokenizeWords } from "./tokenize";
 import { ocrImage } from "./ocr";
-import { CaptureRequest, CaptureResponse } from "../shared/types";
+import { CaptureRequest, CaptureResponse, OcrResult } from "../shared/types";
 
 /**
  * Activates a full-screen crosshair overlay; the user drags a rectangle.
  * On mouseup: requests a tab screenshot from the background, crops it to
- * the drag region, runs OCR, and calls onWords() with the recognised tokens.
+ * the drag region, runs OCR, and calls onResult() with an OcrResult.
+ * A pipeline/worker failure → { ok: false, error }.
+ * A successful OCR (even with zero words) → { ok: true, words }.
  * Press Escape to cancel without OCR.
  */
 export function startCapture(
-  onWords: (words: string[], x: number, y: number) => void
+  onResult: (result: OcrResult, x: number, y: number) => void
 ): void {
   const overlay = document.createElement("div");
   overlay.style.cssText =
@@ -65,17 +67,20 @@ export function startCapture(
     // Ignore accidental clicks (drag smaller than 4px in either dimension).
     if (dragRect.w < 4 || dragRect.h < 4) return;
 
+    const anchorX = dragRect.x + dragRect.w;
+    const anchorY = dragRect.y + dragRect.h;
+
     const req: CaptureRequest = { type: "capture" };
     let resp: CaptureResponse;
     try {
       resp = (await chrome.runtime.sendMessage(req)) as CaptureResponse;
     } catch {
-      onWords([], dragRect.x + dragRect.w, dragRect.y + dragRect.h);
+      onResult({ ok: false, error: "OCR isn't available on this page" }, anchorX, anchorY);
       return;
     }
 
     if (!resp.ok) {
-      onWords([], dragRect.x + dragRect.w, dragRect.y + dragRect.h);
+      onResult({ ok: false, error: resp.error }, anchorX, anchorY);
       return;
     }
 
@@ -85,14 +90,14 @@ export function startCapture(
       const cropped = await cropDataUrl(resp.dataUrl, cropRect);
       text = await ocrImage(cropped);
     } catch {
-      onWords([], dragRect.x + dragRect.w, dragRect.y + dragRect.h);
+      onResult({ ok: false, error: "OCR isn't available on this page" }, anchorX, anchorY);
       return;
     }
 
-    onWords(
-      tokenizeWords(text),
-      dragRect.x + dragRect.w,
-      dragRect.y + dragRect.h
+    onResult(
+      { ok: true, words: tokenizeWords(text) },
+      anchorX,
+      anchorY
     );
   });
 

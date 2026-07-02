@@ -37,3 +37,8 @@ export type LookupResponse =
 export type CaptureResponse =
   | { ok: true; dataUrl: string }
   | { ok: false; error: string };
+
+/** Result passed from the OCR pipeline to the word-picker callback. */
+export type OcrResult =
+  | { ok: true; words: string[] }
+  | { ok: false; error: string };

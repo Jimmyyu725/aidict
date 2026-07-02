@@ -37,6 +37,6 @@ chrome.commands.onCommand.addListener(async (command) => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.id != null) {
     const msg: ToContentMessage = { type: "enter-capture" };
-    chrome.tabs.sendMessage(tab.id, msg).catch(() => {});
+    chrome.tabs.sendMessage(tab.id, msg, { frameId: 0 }).catch(() => {});
   }
 });

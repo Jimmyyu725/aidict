@@ -1,6 +1,6 @@
 import { readSelection, FloatingIcon, SelectionInfo } from "./selection";
 import { Card, CardState } from "./card";
-import { LookupRequest, LookupResponse, ToContentMessage } from "../shared/types";
+import { LookupRequest, LookupResponse, OcrResult, ToContentMessage } from "../shared/types";
 import { startCapture } from "./capture-mode";
 
 function main(): void {
@@ -43,15 +43,25 @@ function main(): void {
   });
 
   /**
-   * Called after OCR: pick a word to look up from the recognized tokens.
-   * - 0 words → error card asking the user to try a tighter box.
-   * - 1 word  → look it up immediately.
-   * - ≥2 words → show a transient clickable picker so the user selects one word.
+   * Called after OCR: handle a pipeline result and pick a word to look up.
+   * - Pipeline failure (!ok)  → error card: "OCR isn't available on this page".
+   * - 0 words (ok, empty)    → error card asking the user to try a tighter box.
+   * - 1 word                 → look it up immediately.
+   * - ≥2 words               → show a transient clickable picker so the user selects one word.
    *
    * Words come from tokenizeWords() which keeps only [A-Za-z'-] characters,
    * so rendering them via innerHTML carries no injection risk.
    */
-  function pickFromWords(words: string[], x: number, y: number): void {
+  function pickFromResult(result: OcrResult, x: number, y: number): void {
+    if (!result.ok) {
+      card.showAt(x, y, {
+        kind: "error",
+        message: "OCR isn't available on this page (it may block the scanner)",
+        canRetry: false,
+      });
+      return;
+    }
+    const { words } = result;
     if (words.length === 0) {
       card.showAt(x, y, {
         kind: "error",
@@ -90,10 +100,12 @@ function main(): void {
 
   // Wire capture mode: background sends "enter-capture" on Alt+D.
   (window as unknown as { __aidictEnterCapture?: () => void }).__aidictEnterCapture =
-    () => startCapture(pickFromWords);
+    () => startCapture(pickFromResult);
 
   chrome.runtime.onMessage.addListener((msg: ToContentMessage) => {
     if (msg.type === "enter-capture") {
+      // Only the top frame should enter capture mode — sub-frames ignore this message.
+      if (window.top !== window) return;
       (window as unknown as { __aidictEnterCapture?: () => void }).__aidictEnterCapture?.();
     }
   });
