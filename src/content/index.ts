@@ -8,6 +8,9 @@ function main(): void {
   const card = new Card();
   let pending: SelectionInfo | null = null;
   let lastLookup: SelectionInfo | null = null;
+  // Whether the visible icon/card is anchored to a live text selection (true for
+  // select-to-lookup, false for OCR capture results, which have no selection).
+  let followSelection = false;
   let prefetchTimer: number | undefined;
   let prefetchedKey = "";
 
@@ -52,7 +55,7 @@ function main(): void {
   document.addEventListener("mouseup", () => {
     setTimeout(() => {
       const info = readSelection(window);
-      if (info) { pending = info; icon.showAt(info.x, info.y); schedulePrefetch(info); }
+      if (info) { followSelection = true; pending = info; icon.showAt(info.x, info.y); schedulePrefetch(info); }
       else { icon.hide(); if (prefetchTimer !== undefined) clearTimeout(prefetchTimer); }
     }, 0);
   });
@@ -61,6 +64,33 @@ function main(): void {
     const path = e.composedPath();
     if (!path.some((n) => n instanceof HTMLElement && n.hasAttribute("data-aidict"))) card.hide();
   });
+
+  // Keep the icon and card anchored next to the selected text while the page
+  // scrolls or resizes. Recomputes the live selection rect (fixed-position
+  // coordinates go stale on scroll), rAF-throttled; capture phase also catches
+  // scrolling inside nested containers. OCR-origin cards are not re-anchored.
+  let repositionQueued = false;
+  function repositionToSelection(): void {
+    repositionQueued = false;
+    if (!followSelection) return;
+    if (!icon.isVisible() && !card.isVisible()) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return;
+    const x = rect.right, y = rect.bottom;
+    if (pending) { pending.x = x; pending.y = y; }
+    if (lastLookup) { lastLookup.x = x; lastLookup.y = y; }
+    if (icon.isVisible()) icon.showAt(x, y);
+    if (card.isVisible()) card.moveTo(x, y);
+  }
+  const queueReposition = (): void => {
+    if (repositionQueued) return;
+    repositionQueued = true;
+    requestAnimationFrame(repositionToSelection);
+  };
+  document.addEventListener("scroll", queueReposition, { capture: true, passive: true });
+  window.addEventListener("resize", queueReposition, { passive: true });
 
   /**
    * Called after OCR: handle a pipeline result and pick a word to look up.
@@ -73,6 +103,7 @@ function main(): void {
    * so rendering them via innerHTML carries no injection risk.
    */
   function pickFromResult(result: OcrResult, x: number, y: number): void {
+    followSelection = false;
     if (!result.ok) {
       card.showAt(x, y, {
         kind: "error",

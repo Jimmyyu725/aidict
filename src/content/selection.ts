@@ -100,6 +100,7 @@ export class FloatingIcon {
     this.el.style.top = `${y + 4}px`;
     this.el.style.display = "block";
   }
+  isVisible(): boolean { return this.el.style.display !== "none"; }
   hide(): void { this.el.style.display = "none"; }
   onClick(cb: () => void): void { this.cb = cb; }
 }

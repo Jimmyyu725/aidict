@@ -123,6 +123,17 @@ export class Card {
     this.root.innerHTML = `<style>${STYLE}</style>${renderCardHTML(state)}`;
   }
 
+  /**
+   * Reposition while open (scroll-follow). X stays clamped inside the viewport;
+   * Y is intentionally unclamped so the card slides along with the anchored
+   * text instead of sticking to the viewport edge.
+   */
+  moveTo(x: number, y: number): void {
+    this.host.style.left = `${Math.min(x, window.innerWidth - 360)}px`;
+    this.host.style.top = `${y + 8}px`;
+  }
+
+  isVisible(): boolean { return this.host.style.display !== "none"; }
   hide(): void { this.host.style.display = "none"; }
   onRetry(cb: () => void): void { this.retryCb = cb; }
 }
